@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRISFTW</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .logo {
+            display: block;
+            margin: 0 auto 20px auto;
+            text-align: center;
+        }
+
+        .export-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="logo">
+            <img src="305218943_496048485861490_6569036082804952578_n.jpg" alt="Logo de la Empresa" id="logoImage" width="150">
+        </div>
+
+        <h1>INVENTARIO DE ONT QUE FALTAN</h1>
+
+        <label for="ontCode">Código de ONT:</label>
+        <input type="text" id="ontCode" placeholder="Ingrese el código de la ONT">
+
+        <label for="ontType">Tipo de ONT:</label>
+        <select id="ontType">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+        </select>
+
+        <label for="ontBlock">Bloque del Piso:</label>
+        <select id="ontBlock">
+            <option value="1A">1A</option>
+            <option value="1B">1B</option>
+            <option value="1C">1C</option>
+            <option value="1D">1D</option>
+        </select>
+
+        <button onclick="addOnt()">Agregar ONT</button>
+
+        <button onclick="toggleTable()">Mostrar/Ocultar ONTs</button>
+
+        <div class="export-buttons">
+            <button onclick="exportToPDF()">Exportar a PDF</button>
+            <button onclick="exportToExcel()">Exportar a Excel</button>
+        </div>
+
+        <table id="ontTable" class="hidden">
+            <thead>
+                <tr>
+                    <th>Código ONT</th>
+                    <th>Tipo de ONT</th>
+                    <th>Bloque del Piso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aquí se agregarán las filas dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Librerías jsPDF y SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadOntsFromLocalStorage);
+
+        function addOnt() {
+            // Obtener valores del formulario
+            const ontCode = document.getElementById('ontCode').value;
+            const ontType = document.getElementById('ontType').value;
+            const ontBlock = document.getElementById('ontBlock').value;
+
+            // Verificar que el campo de código de ONT no esté vacío
+            if (ontCode.trim() === "") {
+                alert("Por favor, ingrese el código de ONT.");
+                return;
+            }
+
+            // Añadir la ONT a la tabla
+            addOntToTable(ontCode, ontType, ontBlock);
+
+            // Guardar los datos en localStorage
+            saveOntToLocalStorage(ontCode, ontType, ontBlock);
+
+            // Limpiar los campos del formulario
+            document.getElementById('ontCode').value = "";
+            document.getElementById('ontType').value = "A";
+            document.getElementById('ontBlock').value = "1A";
+        }
+
+        function addOntToTable(ontCode, ontType, ontBlock) {
+            const table = document.getElementById('ontTable').querySelector('tbody');
+            const newRow = table.insertRow();
+
+            const cell1 = newRow.insertCell(0);
+            const cell2 = newRow.insertCell(1);
+            const cell3 = newRow.insertCell(2);
+            const cell4 = newRow.insertCell(3);
+
+            cell1.textContent = ontCode;
+            cell2.textContent = ontType;
+            cell3.textContent = ontBlock;
+
+            // Añadir botones de editar y borrar
+            cell4.innerHTML = `
+                <button onclick="editOnt(this)">Editar</button>
+                <button onclick="deleteOnt(this)">Borrar</button>
+            `;
+        }
+
+        function saveOntToLocalStorage(ontCode, ontType, ontBlock) {
+            let ontList = JSON.parse(localStorage.getItem('ontList')) || [];
+            ontList.push({ ontCode, ontType, ontBlock });
+            localStorage.setItem('ontList', JSON.stringify(ontList));
+        }
+
+        function loadOntsFromLocalStorage() {
+            let ontList = JSON.parse(localStorage.getItem('ontList')) || [];
+            const table = document.getElementById('ontTable').querySelector('tbody');
+
+            ontList.forEach(ont => {
+                addOntToTable(ont.ontCode, ont.ontType, ont.ontBlock);
+            });
+        }
+
+        function deleteOnt(button) {
+            const row = button.parentNode.parentNode;
+            const code = row.cells[0].textContent;
+
+            row.remove(); // Borrar la fila de la tabla
+
+            let ontList = JSON.parse(localStorage.getItem('ontList')) || [];
+            ontList = ontList.filter(ont => ont.ontCode !== code);
+            localStorage.setItem('ontList', JSON.stringify(ontList)); // Actualizar LocalStorage
+        }
+
+        function editOnt(button) {
+            const row = button.parentNode.parentNode;
+
+            const ontCode = prompt("Editar código de ONT:", row.cells[0].textContent);
+            const ontType = prompt("Editar tipo de ONT:", row.cells[1].textContent);
+            const ontBlock = prompt("Editar bloque del piso:", row.cells[2].textContent);
+
+            if (ontCode && ontType && ontBlock) {
+                row.cells[0].textContent = ontCode;
+                row.cells[1].textContent = ontType;
+                row.cells[2].textContent = ontBlock;
+
+                let ontList = JSON.parse(localStorage.getItem('ontList')) || [];
+                const ontIndex = ontList.findIndex(ont => ont.ontCode === row.cells[0].textContent);
+
+                // Actualizar los datos en LocalStorage
+                if (ontIndex > -1) {
+                    ontList[ontIndex] = { ontCode, ontType, ontBlock };
+                    localStorage.setItem('ontList', JSON.stringify(ontList));
+                }
+            }
+        }
+
+        function toggleTable() {
+            const table = document.getElementById('ontTable');
+            table.classList.toggle('hidden');
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const logo = document.getElementById('logoImage').src;
+            doc.addImage(logo, 'JPEG', 10, 10, 30, 30); // Agregar logo
+
+            doc.text("Lista de ONTs", 20, 50);
+
+            let rowIndex = 70;
+            const table = document.getElementById("ontTable").rows;
+
+            for (let i = 0; i < table.length; i++) {
+                let code = table[i].cells[0].textContent;
+                let type = table[i].cells[1].textContent;
+                let block = table[i].cells[2].textContent;
+                doc.text(`Código: ${code}, Tipo: ${type}, Bloque: ${block}`, 20, rowIndex);
+                rowIndex += 10;
+            }
+
+            doc.save("lista_onts.pdf");
+        }
+
+        function exportToExcel() {
+            const table = document.getElementById("ontTable");
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.table_to_sheet(table);
+            XLSX.utils.book_append_sheet(wb, ws, "ONTs");
+
+            XLSX.writeFile(wb, "lista_onts.xlsx");
+        }
+    </script>
+
+</body>
+</html>
